@@ -1,0 +1,1 @@
+src/app/candidate/mock-interviews/[type]/page.tsx(121,30): error TS2304: Cannot find name 'ArrowRight'.

@@ -1,0 +1,10 @@
+﻿
+> interview-ai@0.1.0 lint
+> eslint
+
+
+C:\Users\Thunder Thilak\.gemini\antigravity\scratch\interview-ai\src\components\demo-3d.tsx
+  5:28  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 1 problem (0 errors, 1 warning)
+

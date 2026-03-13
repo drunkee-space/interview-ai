@@ -1,0 +1,2 @@
+src/app/candidate/mock-interviews/page.tsx(31,43): error TS2322: Type 'string' is not assignable to type 'never'.
+src/components/interview/ControlBar.tsx(49,23): error TS2322: Type 'string' is not assignable to type 'never'.

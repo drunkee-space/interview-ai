@@ -1,0 +1,116 @@
+# Walkthrough: Interview AI Phases 1–9
+
+## Phase 5 (User's numbering): Interview Data Collection & History
+Built the complete data persistence layer and history UI for interview sessions.
+
+### Changes Made
+- **SQL Migration**: [supabase_phase5_migration.sql](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/supabase_phase5_migration.sql) with 4 new tables (`interview_transcripts`, `code_attempts`, `interview_activity_logs`, `interview_questions`) + ALTER on `interview_sessions` for timing fields. All with RLS policies.
+- **[interviewLogger.ts](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/lib/interviewLogger.ts)**: Centralized utility with [saveTranscripts()](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/lib/interviewLogger.ts#31-44), [saveCodeAttempts()](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/lib/interviewLogger.ts#45-62), [saveActivityLogs()](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/lib/interviewLogger.ts#63-76), [saveQuestions()](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/lib/interviewLogger.ts#77-90), and [completeSession()](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/lib/interviewLogger.ts#91-107) functions.
+- **Session Lifecycle**: `device-check` now sets `status='active'` + `start_time`. Both [InterviewRoom](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/InterviewRoom.tsx#17-197) and [CodingWorkspace](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/CodingWorkspace.tsx#19-225) persist all collected data on end and redirect to `/candidate/history`.
+- **History Page**: Rewrote to fetch real sessions from Supabase with status badges, dates, and durations.
+- **Detail Page**: New `/candidate/history/[session_id]` with 4 sections — Transcript (chat bubble UI), Coding Attempts (code blocks + stats), Activity Log (timeline), and Questions Asked (type-coded badges).
+
+## Phase 8: Real IDE Integration & Layout Overhaul
+Completely restructured the Coding Room to eliminate all floating/overlapping issues and integrated a production-grade code editor.
+
+### Changes Made
+- **Monaco Editor**: Replaced the static code placeholder with `@monaco-editor/react` featuring syntax highlighting, bracket colorization, smooth cursor, and JetBrains Mono font.
+- **3-Column Layout**: Rebuilt [CodingWorkspace](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/CodingWorkspace.tsx#19-225) into a rigid CSS Flexbox grid: **Question Panel** (left, 400px) | **IDE + Console** (center, flex-1) | **Right Sidebar** (260px, Timer + Camera + Controls).
+- **Inline Camera**: Added `isFloating` prop to [CandidateCamera](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/CandidateCamera.tsx#14-88)—in the Coding Room it renders as a static inline block inside the sidebar instead of a fixed floating overlay.
+- **Inline Controls**: Moved [CodingMediaControls](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/CodingMediaControls.tsx#17-68) from `position: fixed` to a standard flex child inside the sidebar column.
+- **Live Timer**: Added a real countdown timer (45:00) with color-coded urgency (turns red under 5 minutes).
+- **Console Panel**: Upgraded to accept output props with simulated code execution feedback.
+
+## Phase 7: Interactive Coding Room
+I have replaced the proxy `/code` route with an extensive, production-ready coding environment layout featuring a dark IDE aesthetic and uninterrupted media streams.
+
+### Changes Made
+- **Split-Pane Architecture (`src/components/coding/`)**: Shifted from a conversational layout to a CSS Flexbox split-pane model featuring [CodingQuestionPanel](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/CodingQuestionPanel.tsx#6-69) on the left and specialized IDE panels on the right.
+- **Problem Statement Visualizer**: The left sidebar strictly maps out the mocked AI Problem Statement, including difficulty tags, constraints, and test case explanations.
+- **IDE & Console Pinned View**: Built the [EditorPanel](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/EditorPanel.tsx#10-73) occupying the main real estate, topped with a bright 'Run Code' executor, and capped underneath by the [ConsolePanel](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/ConsolePanel.tsx#11-38) terminal dock.
+- **Stream Pass-Through**: Re-implemented the `navigator.mediaDevices.getUserMedia` hooks directly into the new [CodingWorkspace](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/CodingWorkspace.tsx#19-225). This ensures when a candidate transitions from the Interview Room into the Coding Room, the WebRTC buffers re-mount seamlessly without killing the live stream.
+- **Condensed Media Controls**: Shrunk the massive central control dock from Phase 5 into [CodingMediaControls](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/coding/CodingMediaControls.tsx#17-68)—a tight, beautiful widget fixed in the top right corner beside the Candidate's live floating camera pip.
+
+## Phase 6: Live Media Streams & Refinements
+I have wired up real hardware connections to the Phase 5 layouts and resolved physical device locks. 
+
+### Changes Made
+- **Candidate Mic Indicators**: Added a reactive Mic UI indicator directly inside the Candidate's floating Picture-in-Picture window.
+- **Hardware Light Shutoff**: Engineered the video toggle button to execute standard WebRTC `.stop()` procedures on the tracks, ensuring that your laptop's physical webcam light perfectly syncs with the UI and genuinely shuts off when disabled.
+- **Control Dock Pruning**: Removed the "Next" and "Share" buttons to match the exact streamlined UI request.
+- **Coding Room Entry**: Bound the "Code" button to trigger a Next.js Router Push into `src/app/interview/[sessionId]/code`.
+- **Coding Room Proxy**: Designed a striking interim placeholder environment for `/code` featuring a dark IDE aesthetic, setting the stage perfectly for the Phase 7 Monaco Editor insertion.
+
+## Phase 5: Premium AI Interview Room UI
+I have built the definitive Phase 5 Mock Interview Studio. The interface is highly modular, inspired by Zoom & Google Meet, delivering an immersive SaaS-grade experience.
+
+### Changes Made
+- **Modular Component Architecture (`/src/components/interview/`)**: Split the dense UI into clean Next.js React client components including [TimerBadge](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/TimerBadge.tsx#6-32), [CandidateCamera](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/CandidateCamera.tsx#14-88), [TranscriptPanel](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/TranscriptPanel.tsx#10-59), [QuestionPanel](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/QuestionPanel.tsx#10-34), and [ControlBar](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/components/interview/ControlBar.tsx#15-99).
+- **Primary Studio Page (`/interview/[sessionId]`)**: Created the new global Next.js page capturing the dynamic `sessionId`. The interstitial device-check now appropriately routes candidates directly into this definitive view.
+- **Glassmorphic Control Bar**: Engineered a premium floating control dock featuring standard VoIP toggles (Mic, Video, Share) mapped with sleek active/inactive background states, a primary "Code" toggle, and a distinct danger-red "End" button.
+- **Floating Camera Node**: The Candidate's webcam feed is embedded in a Draggable (`framer-motion`) picture-in-picture window parked in the bottom right corner with a customized glowing "You" tag.
+- **AI Transcript Board**: Included a scrollable live transcript window alongside a responsive AI-typing activity indicator.
+- **Background Scenography**: The root layout applies deep Indigo, Purple, and Blue CSS blurs mapping seamlessly across the black studio canvas to ensure perfect readability constraint.
+
+
+## Phase 4: Mock Interview System Preparation
+I have architected the complete pre-flight flow for candidates entering a Mock Interview. This phase bridges the gap between the Dashboard and the upcoming live AI room, injecting crucial database insertions and media checks.
+
+### Changes Made
+- **Centralized Configurations ([/src/config/mock-interviews.ts](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/config/mock-interviews.ts))**: Built a single source of truth for interview metadata (titles, descriptions, difficulty flags, and exact durations).
+- **Dynamic Mappings**: Both `/candidate/mock-interviews` and its dynamic children routes map over the configurations, instantly displaying the accurate rules per interview type.
+- **Device-Readiness Check (`/candidate/device-check`)**: Implemented a mandatory interstitial lobby that securely queries `navigator.mediaDevices.getUserMedia()`. Validates Webcam & Microphone status, rendering a mirrored video preview.
+- **Supabase Session Insertion**: Bound to the "Create Session" confirmation button. Dynamically writes a record to the new `interview_sessions` Postgres table including the `user_id` & `interview_type`, generating a UUID.
+- **Interview Studio Placeholder (`/candidate/interview-room`)**: Created the final Phase 4 destination. Mocks the layout of Phase 5 featuring Fake video streams natively pulsing and a locked Monaco-style editor.
+
+## Phase 3: Candidate Dashboard Modules
+I have successfully implemented all core Candidate Dashboard modules, laying the groundwork for the interactive AI interview session integration in Phase 4.
+
+### Changes Made
+- **Shared Dashboard Layout ([/candidate/layout.tsx](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/app/candidate/layout.tsx))**: Extracted the Sidebar into a globally persistent Next.js [layout.tsx](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/app/layout.tsx) file for Candidate routes. This significantly improves client-side navigation fluidity preventing full-page reloads.
+- **Dashboard Overview (`/candidate/dashboard`)**: Refactored to utilize the shared layout. Showcases top-level metrics (Average Score, Practice Time) and a primary Call To Action prompting users to begin an interview.
+- **Mock Interviews Library (`/candidate/mock-interviews`)**: Grid interface populated with distinct mock interview cards (Python, JavaScript, Data Structures, etc.) mapped with difficulty and elapsed times.
+- **Pre-interview Lobby (`/candidate/mock-interviews/[type]`)**: Dynamic Next.js route providing explicit rules & instructions depending on the selected interview type before traversing into the actual AI room.
+- **Analytics & History (`/candidate/analytics`, `/candidate/history`)**: Developed premium data-visualization placeholders highlighting "Coding Accuracy", "Communication Score", and detailed historical lists evaluating 'strong' and 'weak' topics.
+- **Settings & Profile Management (`/candidate/settings`)**: A connected Supabase form empowering the user to mutate their `name`, `preferred_language`, `target_job_role`, and `experience_level`.
+
+
+## Phase 2: Authentication & Role-Based Dashboards
+I have successfully implemented a seamless, secure identity layer using Supabase, fully integrating with the Next.js App Router paradigm.
+
+### Changes Made
+- **Supabase Integration**: Connected to your Supabase project using the [.env.local](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/.env.local) variables. Implemented `@supabase/ssr` server and browser clients.
+- **Login & Signup (`/app/login`, `/app/signup`)**: Fully functional auth components utilizing the premium glassmorphism landing page aesthetics natively.
+  - The Signup page captures the user's Full Name, Email, Password, Role (Candidate or Recruiter), and Preferred Language.
+  - Profile metadata is structurally inserted into the core `profiles` table upon Signup.
+- **Role-Based Dashboards**: 
+  - **Candidate Dashboard (`/candidate/dashboard`)**: Implemented a responsive mock premium layout with Overview stats highlighting the candidate's metrics.
+  - **Recruiter Dashboard (`/recruiter/dashboard`)**: Created a polished "Coming Soon" staging component.
+- **Next.js Middleware ([/src/middleware.ts](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/middleware.ts))**: Session resilience is robustly managed with Edge middleware.
+  - Protecting `/candidate` and `/recruiter` routes.
+  - Redirecting verified/authenticated users appropriately based on identity metadata.
+- **Dynamic Navbar**: The Navbar contextually updates client-side to render `[Dashboard, Logout]` if a session is present, and gracefully mutates back to `[Start Practicing/Login]` if the session falls back.
+
+## Phase 1: Premium Landing Page
+- Developed the foundational marketing application with 8 specific zones (Hero, Solution, 3D Demos, Feature Grids).
+- Interactive Framer Motion scrolling and React Three Fiber environments (floating geometry, UI panels).
+- Fluid Custom Dark/Light mode thematic system.
+
+---
+
+## Developer Operations
+
+### To Run Locally
+```bash
+cd scratch/interview-ai
+npm run dev
+```
+
+### Important Notice: Database Alignment
+Ensure that your Supabase database has a corresponding `profiles` table structured as:
+- [id](file:///C:/Users/Thunder%20Thilak/.gemini/antigravity/scratch/interview-ai/src/middleware.ts#4-7) (references `auth.users`)
+- `name` (text)
+- `email` (text)
+- `role` (text)
+- `preferred_language` (text)
+Ensure you set Row Level Security (RLS) policies appropriately for `profiles` to accept inserts from authenticated users so sign-up functions properly.
