@@ -486,7 +486,7 @@ export function CodingWorkspace({ sessionId, type, trackId }: CodingWorkspacePro
 
             {config.mode === "CONCEPTUAL_MODE" && (
                 <div className="bg-blue-500/10 border-y border-blue-500/20 px-5 py-1.5 flex items-center justify-center text-xs text-blue-300 font-medium">
-                    React coding is conceptual. Focus on logic and explanation.
+                    {config.displayName} coding is conceptual. Focus on logic and explanation.
                 </div>
             )}
 

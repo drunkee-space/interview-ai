@@ -109,10 +109,48 @@ export async function executeInBrowser(
         return { ...result, engine: "iframe (TS→JS)" };
     }
 
+    // ─── HTML ───
+    if (lang === "html") {
+        const start = performance.now();
+        try {
+            const blob = new Blob([code], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            const previewWindow = window.open(url, "_blank", "width=900,height=600");
+            // Revoke after the window has had time to load
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            const durationMs = Math.round(performance.now() - start);
+            if (previewWindow) {
+                return {
+                    stdout: "✓ HTML page opened in a new browser tab.\nYou can interact with your form and elements there.",
+                    stderr: "",
+                    exitCode: 0,
+                    durationMs,
+                    engine: "Browser Preview",
+                };
+            } else {
+                return {
+                    stdout: "",
+                    stderr: "⚠ Popup was blocked by the browser. Please allow popups for this site and try again.",
+                    exitCode: 1,
+                    durationMs,
+                    engine: "Browser Preview",
+                };
+            }
+        } catch (e: any) {
+            return {
+                stdout: "",
+                stderr: `HTML preview error: ${e?.message || "Unknown error"}`,
+                exitCode: 1,
+                durationMs: 0,
+                engine: "Browser Preview",
+            };
+        }
+    }
+
     // ─── Unsupported Language ───
     return {
         stdout: "",
-        stderr: `Language "${language}" is not supported for in-browser execution.\n\nSupported languages: Python, SQL, JavaScript, TypeScript`,
+        stderr: `Language "${language}" is not supported for in-browser execution.\n\nSupported languages: Python, SQL, JavaScript, TypeScript, HTML`,
         exitCode: 1,
         durationMs: 0,
         engine: "none",

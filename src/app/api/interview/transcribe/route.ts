@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
             basePrompt += ` The context of their speech revolves around answering this specific question/topic: "${promptContext}". Expect technical terminology matching this question.`;
         }
 
-        const transcription = await groqClient.audio.transcriptions.create({
+        // Use Whisper's translation endpoint which always outputs English regardless of input language.
+        // This prevents garbled transcriptions (e.g. Japanese characters when speaking Tamil)
+        // and ensures the AI always receives clean English text to reason about.
+        const transcription = await (groqClient.audio as any).translations.create({
             file,
             model: "whisper-large-v3-turbo",
             response_format: "verbose_json",
