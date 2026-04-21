@@ -32,7 +32,7 @@ export async function cleanTranscript(rawTranscript: string): Promise<CleanTrans
     const userPrompt = `${SYSTEM_PROMPT}\n\nInput:\n"${safeRaw}"`;
     
     try {
-        const cleanedRaw = await generateJson(userPrompt, "llama-3.3-70b-versatile");
+        const cleanedRaw = await generateJson(userPrompt);
         const cleaned = cleanedRaw as unknown as CleanTranscriptResult;
         
         let processedText = typeof cleaned.corrected_text === "string" ? cleaned.corrected_text.trim() : safeRaw;

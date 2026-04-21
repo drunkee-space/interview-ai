@@ -95,7 +95,7 @@ REQUIREMENTS:
 - Keep tone friendly and beginner-clear
 - All strings; no nested markdown formatting in fields`;
 
-        const parsed = await generateJson(prompt, "llama-3.3-70b-versatile");
+        const parsed = await generateJson(prompt);
 
         const material = {
             user_id: user.id,

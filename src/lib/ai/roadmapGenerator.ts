@@ -57,7 +57,7 @@ OUTPUT STRICT JSON:
 ${MIN_QUESTIONS}-${MAX_QUESTIONS} questions per level.`;
 
     try {
-        const parsed = await generateJson(systemPrompt, "llama-3.3-70b-versatile");
+        const parsed = await generateJson(systemPrompt);
 
         const levels: RoadmapLevel[] = [];
 

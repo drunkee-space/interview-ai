@@ -2,7 +2,7 @@
 // AI Evaluator — Deterministic Evaluation Engine
 // ═══════════════════════════════════════════════════════
 
-import { generateJson } from "./client";
+import { generateJson, DEEPSEEK_MODEL } from "./client";
 import { buildEvaluationPrompt, buildFinalEvaluationPrompt, buildCodeEvaluationPrompt } from "./prompts";
 import { serializeMemory } from "./memory";
 import type { ConversationMemory, AnswerEvaluation, FinalEvaluation, CodeEvaluationResult } from "./types";
@@ -75,7 +75,7 @@ export async function evaluateAnswer(
     const prompt = buildEvaluationPrompt(question, answer, topic);
 
     try {
-        const parsed = await generateJson(prompt);
+        const parsed = await generateJson(prompt, DEEPSEEK_MODEL);
 
         const score = clampScore(parsed.score);
         const clarity = clampScore(parsed.clarity);
@@ -171,7 +171,7 @@ export async function generateFinalEvaluation(
     let improvementPlan: string[] = [];
 
     try {
-        const parsed = await generateJson(prompt);
+        const parsed = await generateJson(prompt, DEEPSEEK_MODEL);
         summary = typeof parsed.summary === "string" && parsed.summary.length > 0
             ? parsed.summary
             : summary;
@@ -216,7 +216,7 @@ export async function evaluateCode(
     const prompt = buildCodeEvaluationPrompt(problem, code);
 
     try {
-        const parsed = await generateJson(prompt);
+        const parsed = await generateJson(prompt, DEEPSEEK_MODEL);
 
         return {
             correct: parsed.correct === true,

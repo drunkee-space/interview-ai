@@ -12,7 +12,10 @@ if (!API_KEY) {
 
 export const groqClient = new Groq({ apiKey: API_KEY || "" });
 
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+export const LLAMA_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+export const DEEPSEEK_MODEL = "deepseek-r1-distill-llama-70b";
+
+const DEFAULT_MODEL = LLAMA_MODEL;
 
 const DEFAULT_SYSTEM_PROMPT = "You are a polished mock interviewer. Speak naturally, stay concise, and avoid repetitive filler.";
 
