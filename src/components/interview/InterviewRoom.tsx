@@ -394,10 +394,28 @@ export function InterviewRoom({ sessionId, trackId }: InterviewRoomProps) {
         if (synthRef.current) synthRef.current.cancel();
         activityLogsRef.current.push({ activity_type: "coding_started", description: "Candidate entered coding mode" });
 
-        // ─── CODING DIFFICULTY = CURRENT DISCUSSION LEVEL ───
-        // Coding difficulty MUST equal the track's current level. No separate calculation.
-        const codingDifficulty = config?.current_level || memory?.difficulty || "easy";
-        console.log(`[InterviewRoom] Coding difficulty synced to discussion level: ${codingDifficulty}`);
+        // ─── CODING DIFFICULTY = AVG ACTUAL PERFORMANCE ───
+        // Use the candidate's demonstrated performance (average of question scores).
+        // This guarantees the coding round matches what they actually proved they can handle,
+        // and never picks a wildly easier/harder problem based on a single answer.
+        const scores = (memory?.topicsAsked || [])
+            .map((t: any) => Number(t?.score))
+            .filter((s: number) => !isNaN(s));
+        const avgScore = scores.length > 0
+            ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length
+            : 5;
+        let codingDifficulty: "easy" | "medium" | "hard";
+        if (avgScore >= 7.5) codingDifficulty = "hard";
+        else if (avgScore >= 5) codingDifficulty = "medium";
+        else codingDifficulty = "easy";
+
+        // Cap by the track's current_level so users can't unlock above their track's tier.
+        const trackLevel = (config?.current_level || "easy") as "easy" | "medium" | "hard";
+        const order = { easy: 1, medium: 2, hard: 3 } as const;
+        if (order[codingDifficulty] > order[trackLevel]) {
+            codingDifficulty = trackLevel;
+        }
+        console.log(`[InterviewRoom] Coding difficulty derived from avgScore=${avgScore.toFixed(2)} (capped by track=${trackLevel}) → ${codingDifficulty}`);
 
         try {
             const res = await fetch("/api/interview/coding-question", {

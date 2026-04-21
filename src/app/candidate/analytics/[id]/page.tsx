@@ -12,7 +12,7 @@ import {
 
 interface SessionData {
     memory: any;
-    transcripts: { role: string; message: string; created_at: string }[];
+    transcripts: { speaker: string; message: string; timestamp: string }[];
     state: string;
 }
 
@@ -397,14 +397,14 @@ export default function InterviewReportPage({
                     {showTranscript && (
                         <div className="bg-card/50 glass border border-border rounded-2xl p-5 space-y-3 max-h-[500px] overflow-y-auto">
                             {transcripts.map((t, i) => (
-                                <div key={i} className={`flex ${t.role === "ai" ? "justify-start" : "justify-end"}`}>
+                                <div key={i} className={`flex ${t.speaker === "ai" ? "justify-start" : "justify-end"}`}>
                                     <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                                        t.role === "ai"
+                                        t.speaker === "ai"
                                             ? "bg-secondary text-foreground rounded-bl-none"
                                             : "bg-primary text-primary-foreground rounded-br-none"
                                     }`}>
                                         <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-1">
-                                            {t.role === "ai" ? "Interviewer" : "You"}
+                                            {t.speaker === "ai" ? "Interviewer" : "You"}
                                         </p>
                                         {t.message}
                                     </div>

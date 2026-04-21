@@ -87,7 +87,7 @@ export async function saveSessionState(
 export async function fetchSessionData(sessionId: string) {
     const [sessionRes, transcriptsRes] = await Promise.all([
         supabase.from("interview_sessions").select("id, user_id, status, interview_type, start_time, end_time, duration, memory_json, config_snapshot, track_id, created_at, updated_at").eq("id", sessionId).single(),
-        supabase.from("interview_transcripts").select("*").eq("session_id", sessionId).order("created_at", { ascending: true })
+        supabase.from("interview_transcripts").select("*").eq("session_id", sessionId).order("timestamp", { ascending: true })
     ]);
 
     if (sessionRes.error && sessionRes.error.code !== "PGRST116") {
