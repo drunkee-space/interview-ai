@@ -145,11 +145,17 @@ export async function generateCodingQuestion(
     const topicsCovered = memory.topicsAsked.map(t => t.topic);
     const weaknesses = memory.detectedWeaknesses;
 
+    // Strong topics = topics where the candidate scored >= 6 during discussion
+    const strongTopics = memory.topicsAsked
+        .filter(t => t.score !== null && (t.score ?? 0) >= 6)
+        .map(t => t.topic);
+
     const prompt = buildCodingQuestionPrompt(
         memory.interviewType,
         memory.difficulty,
         topicsCovered,
-        weaknesses
+        weaknesses,
+        strongTopics
     );
 
     try {

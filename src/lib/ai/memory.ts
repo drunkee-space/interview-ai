@@ -193,14 +193,26 @@ export function serializeMemory(memory: ConversationMemory): string {
     parts.push(`Question ${memory.questionCount}/${memory.maxQuestions}`);
     parts.push("");
 
-    // Conversation History (last 3 turns to keep context optimized and save tokens)
-    const recentHistory = memory.conversationHistory.slice(-3);
+    // Conversation History (last 8 turns for full context awareness)
+    const recentHistory = memory.conversationHistory.slice(-8);
     if (recentHistory.length > 0) {
-        parts.push("=== Recent Conversation ===");
+        parts.push("=== Full Conversation So Far ===");
         for (const turn of recentHistory) {
             const label = turn.role === "interviewer" ? "Interviewer" : "Candidate";
             parts.push(`${label}: ${turn.content}`);
         }
+        parts.push("");
+    }
+
+    // Concepts the candidate has already explained — DO NOT re-ask these
+    const candidateTurns = memory.conversationHistory
+        .filter(t => t.role === "candidate")
+        .map(t => t.content)
+        .join(" ");
+    if (candidateTurns.trim()) {
+        parts.push("=== Concepts Candidate Already Explained ===");
+        parts.push("(Do NOT ask about these again — the candidate has already addressed them)");
+        parts.push(candidateTurns.substring(0, 600)); // cap to save tokens
         parts.push("");
     }
 

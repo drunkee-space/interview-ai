@@ -379,10 +379,56 @@ export default function InterviewReportPage({
             )}
 
             {!evaluation && (
-                <div className="bg-card/50 glass border border-border rounded-2xl p-8 text-center mb-10">
-                    <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">Evaluation data is not available for this session.</p>
-                </div>
+                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-10">
+                    {questionCount === 0 ? (
+                        /* No questions answered at all */
+                        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-10 text-center">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                                <Sparkles className="w-7 h-7 text-primary" />
+                            </div>
+                            <h2 className="text-xl font-bold text-foreground mb-2">Ready to shine? 🌟</h2>
+                            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">
+                                It looks like this session hasn't started yet. Begin your interview and answer questions — your personalized report will appear here as you go.
+                            </p>
+                            <button onClick={() => router.push("/candidate/mock-interviews")}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+                                Start an Interview <ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        /* Some questions answered but evaluation not yet generated */
+                        <div className="space-y-4">
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-8 text-center">
+                                <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+                                    <Trophy className="w-7 h-7 text-amber-500" />
+                                </div>
+                                <h2 className="text-xl font-bold text-foreground mb-2">Great start — keep going! 💪</h2>
+                                <p className="text-muted-foreground text-sm max-w-md mx-auto mb-2">
+                                    You answered <span className="text-foreground font-semibold">{questionCount} question{questionCount > 1 ? "s" : ""}</span> in this session.
+                                    {questionCount < 3
+                                        ? " Your full report is generated after completing the discussion and coding rounds."
+                                        : " Complete all rounds to unlock your full AI evaluation report."}
+                                </p>
+                                <p className="text-muted-foreground text-xs max-w-sm mx-auto">
+                                    Every question you answer teaches the AI more about your strengths. The more you do, the richer your feedback gets!
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {[
+                                    { icon: MessageSquare, label: "Discussion Round", desc: "Answer conceptual questions to show your knowledge", done: questionCount > 0 },
+                                    { icon: Target, label: "Coding Round", desc: "Solve a hands-on coding challenge relevant to the topic", done: false },
+                                    { icon: Trophy, label: "Full Evaluation", desc: "Get your personalised AI score, feedback & study plan", done: false },
+                                ].map(({ icon: Icon, label, desc, done }) => (
+                                    <div key={label} className={`rounded-xl p-4 border text-center ${done ? "bg-emerald-500/5 border-emerald-500/20" : "bg-card/40 border-border"}`}>
+                                        <Icon className={`w-5 h-5 mx-auto mb-2 ${done ? "text-emerald-400" : "text-muted-foreground"}`} />
+                                        <p className={`text-sm font-semibold mb-1 ${done ? "text-emerald-400" : "text-foreground"}`}>{label} {done ? "✓" : ""}</p>
+                                        <p className="text-[11px] text-muted-foreground">{desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
             )}
 
             {/* Transcript Toggle */}

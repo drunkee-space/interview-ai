@@ -254,15 +254,27 @@ ${phaseInstruction}
 
 ═══════════════════════════════════
 
-🎯 MOST IMPORTANT RULE: ACKNOWLEDGE THEIR ANSWER
+🚨 CRITICAL MEMORY RULE — READ THIS FIRST
 
-Before asking the next question, you MUST briefly react to what the candidate just said:
+You have full access to the conversation history and everything the candidate has already said.
+BEFORE generating a question, you MUST scan the "Concepts Candidate Already Explained" and "Full Conversation So Far" sections below.
+
+NEVER ask about anything the candidate has already explained or answered — even partially.
+If they mentioned "HTML stands for HyperText Markup Language", do NOT ask "What does HTML stand for?"
+If they described how a loop works, do NOT ask "What is a loop?"
+Always move forward to a NEW concept or go deeper on something they haven't fully covered yet.
+
+═══════════════════════════════════
+
+🎯 RULE 2: ACKNOWLEDGE THEIR ANSWER
+
+Before asking the next question, briefly react to what the candidate just said:
 - If they answered correctly: "That's right!" / "Exactly." / "Good, you got that."
 - If they were partially right: "You're on the right track." / "Close!"
 - If they were wrong: "Not quite, but good effort." / "That's a common confusion."
 - If they were confused: "No worries, let me simplify."
 
-Then ask the next question.
+Then ask the NEXT NEW question.
 
 ═══════════════════════════════════
 
@@ -280,8 +292,9 @@ GOOD EXAMPLES:
 - "Nice try. Let me simplify — what does CSS stand for?"
 
 BAD EXAMPLES (NEVER DO THIS):
+- Asking "What does HTML stand for?" if the candidate already said it
+- Asking about anything already covered in the conversation history
 - "What is CSS?" (no acknowledgment, robotic)
-- "No worries. Let's try this — What is HTML?" (generic fallback)
 - Long paragraphs or lectures
 - Repeating greetings ("Hi!", "Welcome!")
 
@@ -290,8 +303,8 @@ BAD EXAMPLES (NEVER DO THIS):
 📈 PROGRESSION RULES
 
 - Action: ${action}
-- If action is CONTINUE_TOPIC: Ask another question at same difficulty
-- If action is DEEPER_QUESTION: Ask a harder question on the same topic
+- If action is CONTINUE_TOPIC: Ask another question at same difficulty on a NEW concept
+- If action is DEEPER_QUESTION: Ask a harder question on the same topic, going deeper
 - If action is SIMPLIFY_QUESTION: Ask an easier question, optionally with a small hint
 - If action is REASK: Rephrase the same question more clearly
 - If action is CLARIFY: Ask them to elaborate on their previous answer
@@ -305,12 +318,15 @@ CONTEXT:
 - Last question asked: "${lastQuestion}"
 - Known weaknesses: ${weaknesses.length > 0 ? weaknesses.join(", ") : "none yet"}
 
+Previous conversation summary:
+${previousQuestionsSummary}
+
 ═══════════════════════════════════
 
 🎯 OUTPUT FORMAT
 
 {
-  "question": "Your natural response including acknowledgment + next question",
+  "question": "Your natural response including acknowledgment + next NEW question",
   "topic": "${topic}",
   "difficulty": "${difficulty}"
 }`;
@@ -426,29 +442,41 @@ export function buildCodingQuestionPrompt(
     interviewType: string,
     difficulty: string,
     topicsCovered: string[],
-    weaknesses: string[]
+    weaknesses: string[],
+    strongTopics: string[]
 ): string {
-    return `You are a technical interviewer generating a coding challege.
+    const strongTopicContext = strongTopics.length > 0
+        ? `- Topics the candidate is CONFIDENT in (PRIORITIZE these): ${strongTopics.join(", ")}`
+        : "";
+    const weakTopicContext = weaknesses.length > 0
+        ? `- Topics the candidate struggled with (AVOID these for coding): ${weaknesses.join(", ")}`
+        : "";
+
+    return `You are a technical interviewer generating a coding challenge.
 
 INPUT:
 - Interview Type: ${interviewType}
 - Target Difficulty: ${difficulty}
-- Topics already covered: ${topicsCovered.join(", ")}
-- Detected weaknesses: ${weaknesses.join(", ")}
+- Topics discussed in the interview: ${topicsCovered.join(", ")}
+${strongTopicContext}
+${weakTopicContext}
 
 TASK:
-Generate a unique, relevant coding challenge.
+Generate a coding challenge that is DIRECTLY related to what was discussed in the interview.
 
 RULES:
-- Must be a ${difficulty} level problem
-- Do NOT repeat topics already covered if possible
-- Focus on testing candidate weaknesses: ${weaknesses.join(", ")}
-- Provide a clear problem statement
+- MUST be based on one of the topics discussed in the interview — do not invent unrelated topics
+- STRONGLY PREFER topics where the candidate showed confidence and understanding
+- Avoid topics where the candidate clearly struggled or said "I don't know"
+- The problem must be ${difficulty} level
+- Must be a practical coding task (write a function, fix a bug, implement something)
+- Must clearly relate to the interview topic (e.g. if HTML was discussed, ask about DOM manipulation or form building)
+- Provide a clear, complete problem statement with example inputs/outputs if applicable
 
 OUTPUT STRICT JSON:
 {
-  "question": "Full problem description",
-  "topic": "Focus area",
+  "question": "Full problem description with clear requirements",
+  "topic": "Specific topic this tests (must match interview discussion)",
   "hints": ["hint 1", "hint 2"]
 }`;
 }
