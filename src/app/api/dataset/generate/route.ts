@@ -3,8 +3,8 @@
 // ═══════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
-import { generateDatasetBatch } from "@/lib/gemini/datasetGenerator";
-import type { DatasetGenerateRequest } from "@/lib/gemini/types";
+import { generateDatasetBatch } from "@/lib/ai/datasetGenerator";
+import type { DatasetGenerateRequest } from "@/lib/ai/types";
 
 export async function POST(request: NextRequest) {
     try {

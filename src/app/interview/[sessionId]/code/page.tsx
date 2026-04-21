@@ -13,7 +13,11 @@ export default function CodingRoomPage({
 
     // Unwrap search parameters to get the underlying values
     const resolvedSearchParams = use(searchParams);
+    
+    // Priority: explicit type param → trackId (legacy) → fallback to python
+    // The InterviewRoom now passes type=config.primary_topic which maps to language config
     const type = (resolvedSearchParams.type as string) || "python";
+    const trackId = (resolvedSearchParams.trackId as string) || "";
 
-    return <CodingWorkspace sessionId={sessionId} type={type} />;
+    return <CodingWorkspace sessionId={sessionId} type={type} trackId={trackId} />;
 }

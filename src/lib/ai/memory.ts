@@ -31,13 +31,19 @@ export function createMemory(
         candidateLevel,
         conversationHistory: [],
         topicsAsked: [],
+        skippedTopics: [],
         detectedStrengths: [],
         detectedWeaknesses: [],
         codingAttempts: [],
         questionCount: 0,
         maxQuestions,
         overallImpressionSoFar: "",
+        confidenceScoreDeduction: 0,
+        consecutiveStruggles: 0,
+        isTechnicalStarted: false,
         isComplete: false,
+        irrelevantCount: 0,
+        lowScoreStreak: 0,
     };
 }
 
@@ -88,7 +94,13 @@ export function updateMemoryWithEvaluation(
     if (existingTopic) {
         newTopics = memory.topicsAsked.map(t =>
             t.topic === questionTopic
-                ? { ...t, score: evaluation.score, feedback: evaluation.feedback }
+                ? {
+                    ...t,
+                    score: Math.min(10, Math.max(0, evaluation.score || 5)),
+                    clarity: Math.min(10, Math.max(0, evaluation.clarity || 5)),
+                    depth: Math.min(10, Math.max(0, evaluation.depth || 5)),
+                    feedback: evaluation.explanation || "Score calculated.",
+                }
                 : t
         );
     } else {
@@ -97,8 +109,10 @@ export function updateMemoryWithEvaluation(
             {
                 topic: questionTopic,
                 asked: true,
-                score: evaluation.score,
-                feedback: evaluation.feedback,
+                score: Math.min(10, Math.max(0, evaluation.score || 5)),
+                clarity: Math.min(10, Math.max(0, evaluation.clarity || 5)),
+                depth: Math.min(10, Math.max(0, evaluation.depth || 5)),
+                feedback: evaluation.explanation || "Score calculated.",
             },
         ];
     }
@@ -111,14 +125,45 @@ export function updateMemoryWithEvaluation(
             ? "Candidate shows moderate understanding with some gaps."
             : "Candidate is struggling and needs more guidance.";
 
+    let deduction = 0;
+    if (evaluation.skipped || evaluation.intent === "NO_ANSWER") deduction += 5;
+    if (evaluation.clarity && evaluation.clarity <= 3) deduction += 2; // VERY short or repetitive penalty
+    if (evaluation.depth && evaluation.depth <= 3) deduction += 2;
+
+    // Handle consecutive struggles logic
+    let struggles = memory.consecutiveStruggles || 0;
+    if (evaluation.score <= 4 || evaluation.skipped) {
+        struggles += 1;
+    } else if (evaluation.score >= 6) {
+        struggles = 0;
+    }
+
+    // Track answer validation state
+    let irrelevantCount = memory.irrelevantCount || 0;
+    let lowScoreStreak = memory.lowScoreStreak || 0;
+
+    if (!evaluation.is_relevant) {
+        irrelevantCount += 1;
+    }
+
+    if (evaluation.score <= 3) {
+        lowScoreStreak += 1;
+    } else {
+        lowScoreStreak = 0;
+    }
+
     return {
         ...memory,
         detectedStrengths: newStrengths,
         detectedWeaknesses: newWeaknesses,
         topicsAsked: newTopics,
         questionCount: memory.questionCount + 1,
+        consecutiveStruggles: struggles,
+        confidenceScoreDeduction: (memory.confidenceScoreDeduction || 0) + deduction,
         overallImpressionSoFar: impression,
         isComplete: memory.questionCount + 1 >= memory.maxQuestions,
+        irrelevantCount,
+        lowScoreStreak,
     };
 }
 
@@ -148,8 +193,8 @@ export function serializeMemory(memory: ConversationMemory): string {
     parts.push(`Question ${memory.questionCount}/${memory.maxQuestions}`);
     parts.push("");
 
-    // Conversation History (last 10 turns to keep context manageable)
-    const recentHistory = memory.conversationHistory.slice(-10);
+    // Conversation History (last 3 turns to keep context optimized and save tokens)
+    const recentHistory = memory.conversationHistory.slice(-3);
     if (recentHistory.length > 0) {
         parts.push("=== Recent Conversation ===");
         for (const turn of recentHistory) {
@@ -177,6 +222,11 @@ export function serializeMemory(memory: ConversationMemory): string {
     // Weaknesses
     if (memory.detectedWeaknesses.length > 0) {
         parts.push(`Detected Weaknesses: ${memory.detectedWeaknesses.join(", ")}`);
+    }
+
+    // Skipped Topics (candidate said "I don't know")
+    if (memory.skippedTopics && memory.skippedTopics.length > 0) {
+        parts.push(`Skipped Topics (do NOT re-ask): ${memory.skippedTopics.join(", ")}`);
     }
 
     // Coding attempts

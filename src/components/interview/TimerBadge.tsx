@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Clock, Wifi } from "lucide-react";
 
-export function TimerBadge({ duration }: { duration: string }) {
+export function TimerBadge({ duration }: { duration: string | number }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -23,7 +23,7 @@ export function TimerBadge({ duration }: { duration: string }) {
             <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-white/70" />
                 <span className="font-mono text-sm font-semibold text-white tracking-wider">
-                    {duration.replace(" mins", "")}:00
+                    {String(duration).replace(" mins", "")}:00
                 </span>
             </div>
         </motion.div>

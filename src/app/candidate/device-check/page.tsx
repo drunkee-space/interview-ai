@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { MOCK_INTERVIEWS } from "@/config/mock-interviews";
-import { Camera, Mic, AlertCircle, CheckCircle2, Loader2, VideoOff } from "lucide-react";
+import { Camera, Mic, AlertCircle, CheckCircle2, Loader2, VideoOff, Headphones } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function DeviceCheck() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const type = searchParams.get("type");
+    const trackId = searchParams.get("trackId");
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
@@ -19,14 +18,41 @@ export default function DeviceCheck() {
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [errorDetails, setErrorDetails] = useState("");
 
-    const config = MOCK_INTERVIEWS.find((i) => i.id === type);
+    const [config, setConfig] = useState<any>(null);
+    const [configFailed, setConfigFailed] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
-        if (!type || !config) {
+        if (!trackId) {
             router.push("/candidate/mock-interviews");
             return;
         }
+
+        async function fetchConfig() {
+            const { data } = await supabase
+                .from("interview_tracks")
+                .select("*, generated_interviews(config_json)")
+                .eq("id", trackId)
+                .single();
+
+            if (data && data.generated_interviews && data.generated_interviews.config_json) {
+                const loadedConfig = { ...data.generated_interviews.config_json, difficulty: data.difficulty };
+                
+                // Final safety check
+                if (!loadedConfig.primary_topic || loadedConfig.primary_topic === "INVALID") {
+                    console.error("[Device Check] Config topic is invalid or missing:", loadedConfig);
+                    setConfigFailed(true);
+                    return;
+                }
+
+                console.log(`[Device Check] Loaded config: ${loadedConfig.primary_topic} - ${loadedConfig.title}`);
+                setConfig(loadedConfig);
+            } else {
+                console.error("[Device Check] Failed to locate config for trackId:", trackId);
+                setConfigFailed(true);
+            }
+        }
+        fetchConfig();
 
         async function requestPermissions() {
             try {
@@ -64,10 +90,10 @@ export default function DeviceCheck() {
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [type]);
+    }, [trackId]);
 
     const handleCreateSession = async () => {
-        if (!type) return;
+        if (!trackId || !config) return;
         setIsCreatingSession(true);
 
         try {
@@ -78,11 +104,18 @@ export default function DeviceCheck() {
                 return;
             }
 
-            // Create Interview Session in Supabase
+            // Create Interview Session in Supabase with snapshot mapping
             const { data, error } = await supabase
                 .from("interview_sessions")
                 .insert([
-                    { user_id: user.id, interview_type: type, status: 'active', start_time: new Date().toISOString() }
+                    { 
+                        user_id: user.id, 
+                        interview_type: config.primary_topic, 
+                        status: 'active', 
+                        start_time: new Date().toISOString(),
+                        track_id: trackId,
+                        config_snapshot: config
+                    }
                 ])
                 .select()
                 .single();
@@ -95,7 +128,7 @@ export default function DeviceCheck() {
             }
 
             // Navigate to the full-screen premium AI interview room
-            router.push(`/interview/${data.id}?type=${type}`);
+            router.push(`/interview/${data.id}?trackId=${trackId}`);
 
         } catch (err) {
             console.error("Failed to create session:", err);
@@ -110,6 +143,24 @@ export default function DeviceCheck() {
         return defaultIcon;
     };
 
+    if (configFailed) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center py-32 text-center">
+                <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
+                <h1 className="text-2xl font-bold text-foreground mb-4">Interview Configuration Failed</h1>
+                <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                    Failed to verify the topic and configuration of this interview safely. Please generate a new interview track to guarantee a deterministic experience.
+                </p>
+                <button
+                    onClick={() => router.push("/candidate/mock-interviews")}
+                    className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-bold hover:opacity-90"
+                >
+                    Return to Dashboard
+                </button>
+            </div>
+        );
+    }
+    
     if (!config) return null; // Prevent flicker during redirect
 
     return (
@@ -189,6 +240,12 @@ export default function DeviceCheck() {
                                     <Mic className="w-4 h-4 text-primary" />
                                 </div>
                                 <p className="text-muted-foreground"><strong className="text-foreground">Required:</strong> The AI needs a working microphone to process your spoken responses.</p>
+                            </div>
+                            <div className="flex items-start text-sm">
+                                <div className="p-1 rounded bg-secondary mr-3 mt-0.5">
+                                    <Headphones className="w-4 h-4 text-foreground" />
+                                </div>
+                                <p className="text-muted-foreground"><strong className="text-foreground">Highly Recommended:</strong> Please wear headphones to prevent audio feedback loops during the interview.</p>
                             </div>
                         </div>
 

@@ -9,7 +9,7 @@ export default async function InterviewPage({
 }) {
     const { sessionId } = await params;
     const resolvedSearchParams = await searchParams;
-    const type = (resolvedSearchParams.type as string) || "python";
+    const trackId = (resolvedSearchParams.trackId as string) || "";
 
-    return <InterviewRoom sessionId={sessionId} type={type} />;
+    return <InterviewRoom sessionId={sessionId} trackId={trackId} />;
 }

@@ -45,7 +45,7 @@ export default function SessionDetail({ params }: { params: Promise<{ session_id
     useEffect(() => {
         async function fetchAll() {
             const [sessionRes, transcriptRes, codeRes, activityRes, questionRes, evalRes] = await Promise.all([
-                supabase.from("interview_sessions").select("*").eq("id", sessionId).single(),
+                supabase.from("interview_sessions").select("id, user_id, status, interview_type, start_time, end_time, duration, created_at, updated_at, config_snapshot, track_id").eq("id", sessionId).single(),
                 supabase.from("interview_transcripts").select("*").eq("session_id", sessionId).order("timestamp", { ascending: true }),
                 supabase.from("code_attempts").select("*").eq("session_id", sessionId).order("timestamp", { ascending: true }),
                 supabase.from("interview_activity_logs").select("*").eq("session_id", sessionId).order("timestamp", { ascending: true }),

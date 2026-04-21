@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
-import { generateCodingQuestion } from "@/lib/gemini/interviewer";
-import type { ConversationMemory } from "@/lib/gemini/types";
+import { generateCodingQuestion } from "@/lib/ai/interviewer";
+import type { ConversationMemory } from "@/lib/ai/types";
 
 export async function POST(req: Request) {
     try {
-        const memory: ConversationMemory = await req.json();
+        const body = await req.json();
+        const { difficulty, ...memoryFields } = body;
+        const memory: ConversationMemory = memoryFields;
 
         if (!memory || !memory.interviewType) {
             return NextResponse.json(
                 { error: "Invalid conversation memory provided" },
                 { status: 400 }
             );
+        }
+
+        // Override memory difficulty with adaptive difficulty from discussion performance
+        if (difficulty) {
+            memory.difficulty = difficulty;
         }
 
         const challenge = await generateCodingQuestion(memory);
