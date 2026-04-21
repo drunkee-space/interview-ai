@@ -44,7 +44,42 @@ export function createMemory(
         isComplete: false,
         irrelevantCount: 0,
         lowScoreStreak: 0,
+        // Concept-aware memory (Phase 2 upgrade)
+        phase: "INTRO",
+        currentConcept: undefined,
+        conceptQueue: deriveConceptQueue(interviewType),
+        visitedConcepts: [],
+        conceptAttempts: {},
+        weakConcepts: [],
+        strongConcepts: [],
+        scoreHistory: [],
+        lastQuestion: "",
+        lastUserAnswer: "",
+        lastScore: undefined,
+        motivationLevel: "neutral",
     };
+}
+
+/**
+ * Derive a default concept queue from an interview type / topic.
+ * Falls back to a generic queue if topic isn't recognized.
+ */
+export function deriveConceptQueue(interviewType: string): string[] {
+    const t = (interviewType || "").toLowerCase();
+    const concepts: Record<string, string[]> = {
+        react: ["components", "props", "state", "hooks", "lifecycle", "context", "performance"],
+        javascript: ["variables", "functions", "closures", "async", "promises", "prototypes", "event_loop"],
+        typescript: ["types", "interfaces", "generics", "narrowing", "utility_types"],
+        node: ["modules", "event_loop", "streams", "async", "express_basics", "error_handling"],
+        python: ["data_types", "functions", "comprehensions", "oop", "decorators", "generators"],
+        sql: ["select_basics", "joins", "aggregations", "subqueries", "indexes", "transactions"],
+        html: ["tags", "semantic_html", "forms", "accessibility", "meta_tags"],
+        css: ["selectors", "box_model", "flexbox", "grid", "positioning", "responsive"],
+    };
+    for (const key of Object.keys(concepts)) {
+        if (t.includes(key)) return concepts[key];
+    }
+    return ["fundamentals", "core_concepts", "common_patterns", "advanced_topics", "real_world_usage"];
 }
 
 /**
@@ -152,6 +187,25 @@ export function updateMemoryWithEvaluation(
         lowScoreStreak = 0;
     }
 
+    // ─── Concept-aware tracking ───
+    const score = Math.min(10, Math.max(0, evaluation.score || 0));
+    const concept = (memory.currentConcept || questionTopic || "general").toLowerCase();
+    const conceptAttempts = { ...(memory.conceptAttempts || {}) };
+    // Increment attempts only on weak performance — these are "retries on same concept"
+    if (score < 4) {
+        conceptAttempts[concept] = (conceptAttempts[concept] || 0) + 1;
+    }
+    const scoreHistory = [...(memory.scoreHistory || []), score];
+
+    const weakConcepts = new Set(memory.weakConcepts || []);
+    const strongConcepts = new Set(memory.strongConcepts || []);
+    if (score < 4) weakConcepts.add(concept);
+    if (score >= 7) strongConcepts.add(concept);
+
+    // Motivation tone (rule from spec)
+    const motivationLevel: ConversationMemory["motivationLevel"] =
+        score < 4 ? "supportive" : score >= 7 ? "challenging" : "neutral";
+
     return {
         ...memory,
         detectedStrengths: newStrengths,
@@ -164,6 +218,13 @@ export function updateMemoryWithEvaluation(
         isComplete: memory.questionCount + 1 >= memory.maxQuestions,
         irrelevantCount,
         lowScoreStreak,
+        // concept-aware fields
+        conceptAttempts,
+        scoreHistory,
+        weakConcepts: Array.from(weakConcepts),
+        strongConcepts: Array.from(strongConcepts),
+        lastScore: score,
+        motivationLevel,
     };
 }
 

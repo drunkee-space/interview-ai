@@ -79,6 +79,19 @@ export interface ConversationMemory {
     irrelevantCount: number;        // Total irrelevant answers this session
     lowScoreStreak: number;         // Consecutive low-score answers
     lowConfidenceCount?: number;    // Tracks current transcript failure loop
+    // ─── Concept-Aware Memory (Phase 2 upgrade) ───
+    phase?: "INTRO" | "TECHNICAL" | "CODING";
+    currentConcept?: string;
+    conceptQueue?: string[];           // Concepts still to cover for current topic
+    visitedConcepts?: string[];        // Concepts already explored
+    conceptAttempts?: Record<string, number>; // attempts per concept (low-score retries)
+    weakConcepts?: string[];
+    strongConcepts?: string[];
+    scoreHistory?: number[];           // All evaluation scores in order
+    lastQuestion?: string;
+    lastUserAnswer?: string;
+    lastScore?: number;
+    motivationLevel?: "supportive" | "neutral" | "challenging";
 }
 
 export interface CodingAttemptRecord {
@@ -106,11 +119,13 @@ export interface AnswerEvaluation {
 }
 
 export interface DecisionActionResult {
-    action: "CONTINUE_TOPIC" | "DEEPER_QUESTION" | "SIMPLIFY_QUESTION" | "SWITCH_TOPIC" | "MOVE_TO_CODING" | "REASK" | "CLARIFY" | "WARN" | "END_INTERVIEW";
+    action: "CONTINUE_TOPIC" | "DEEPER_QUESTION" | "SIMPLIFY_QUESTION" | "SWITCH_TOPIC" | "SWITCH_CONCEPT" | "MOVE_TO_CODING" | "REASK" | "CLARIFY" | "WARN" | "END_INTERVIEW";
     next_topic: string;
     difficulty: "easy" | "medium" | "hard";
     reason: string;
     message?: string;           // Optional inline message to the candidate (e.g. "Let me ask that again")
+    next_concept?: string;      // The next concept to ask about (when switching)
+    motivation?: "supportive" | "neutral" | "challenging";
 }
 
 export interface CodeEvaluationResult {

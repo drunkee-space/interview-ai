@@ -237,8 +237,8 @@ export function cleanPostResponseOutput(
         }
     }
     
-    // 3. Allow up to 4 sentences for natural conversation flow
-    const trimmed = uniqueSentences.slice(0, 4).join(" ");
+    // 3. Hard-cap at 2 sentences (per upgraded response format spec)
+    const trimmed = uniqueSentences.slice(0, 2).join(" ");
     
     // 4. Only block EXACT identical short responses (< 50 chars) from previous turns
     //    Long responses are unlikely to be true duplicates

@@ -1,0 +1,275 @@
+You are upgrading the AI Interview Discussion Engine into a fully intelligent, memory-driven, topic-aware Interview System that behaves like a real human interviewer.
+
+---
+
+🎯 OBJECTIVE
+
+Build an AI interviewer that:
+
+- remembers past conversation
+- evaluates user understanding
+- decides whether to go deeper or switch topic
+- avoids repetition
+- keeps responses short and engaging
+- motivates the candidate
+- adapts difficulty dynamically
+
+---
+
+🧠 1. CONVERSATION MEMORY (MANDATORY)
+
+Maintain structured memory:
+
+{
+sessionId,
+topic,
+phase: "INTRO" | "TECHNICAL" | "CODING",
+
+currentConcept,
+visitedConcepts: [],
+conceptQueue: [],
+
+questionIndex,
+lastQuestion,
+lastUserAnswer,
+
+lastScore,
+scoreHistory: [],
+
+weakConcepts: [],
+strongConcepts: [],
+
+irrelevantCount,
+lowConfidenceCount,
+
+motivationLevel
+}
+
+---
+
+🧠 2. CONCEPT SYSTEM (CRITICAL)
+
+Each topic must be broken into concepts:
+
+Example (React):
+
+- hooks
+- state
+- props
+- lifecycle
+- context
+
+---
+
+RULES
+
+- Track currentConcept
+- Maintain conceptQueue
+- Move sequentially unless switching is required
+
+---
+
+🧠 3. DECISION ENGINE (CORE LOGIC)
+
+Before calling AI, determine action:
+
+---
+
+CASE 1: USER UNDERSTANDS (GO DEEPER)
+
+IF lastScore >= 7:
+
+→ action = "DEEPER_QUESTION"
+→ stay in same concept
+→ increase difficulty
+
+---
+
+CASE 2: PARTIAL UNDERSTANDING
+
+IF lastScore between 4–6:
+
+→ action = "CLARIFY"
+→ ask simpler follow-up on same concept
+
+---
+
+CASE 3: USER DOES NOT UNDERSTAND (SWITCH TOPIC)
+
+IF lastScore < 4:
+
+→ mark currentConcept as WEAK
+→ add to weakConcepts
+
+IF attempts on same concept ≥ 2:
+
+→ action = "SWITCH_CONCEPT"
+→ move to next concept in conceptQueue
+
+---
+
+IMPORTANT
+
+- NEVER get stuck on one concept forever
+- NEVER switch too early
+- Try at least 2 attempts before switching
+
+---
+
+🧠 4. TOPIC SWITCHING RULE
+
+When switching concept:
+
+- update currentConcept
+- push previous concept to visitedConcepts
+- load next concept from conceptQueue
+
+---
+
+MESSAGE STYLE
+
+When switching:
+
+"Let’s move to another concept. Can you explain {newConcept}?"
+
+---
+
+🧠 5. AI ROLE (STRICT)
+
+AI is ONLY allowed to:
+
+- ask follow-up questions
+- deepen understanding
+- simplify questions
+- guide transitions
+- motivate user
+
+AI is NOT allowed to:
+
+- generate random topics
+- restart interview
+- ask intro again
+- repeat questions
+
+---
+
+🧠 6. RESPONSE FORMAT RULE
+
+Every response MUST:
+
+- be 1–2 sentences ONLY
+- include 1 short encouragement
+- include 1 clear question
+
+---
+
+EXAMPLES
+
+"Nice start. Can you explain how useState updates asynchronously?"
+
+"No worries. What is the difference between props and state?"
+
+---
+
+🧠 7. ANTI-REPETITION GUARD
+
+IF generated question == lastQuestion:
+
+→ regenerate immediately
+
+---
+
+🧠 8. CONTEXT INJECTION (CRITICAL)
+
+Send structured context to AI:
+
+Topic: {topic}
+Current Concept: {currentConcept}
+Last Question: {lastQuestion}
+User Answer: {lastUserAnswer}
+Score: {lastScore}
+Weak Concepts: {weakConcepts}
+Action: {action}
+
+---
+
+🧠 9. MOTIVATION ENGINE
+
+Adjust tone:
+
+IF score < 4:
+→ supportive tone
+
+IF score >= 7:
+→ challenging tone
+
+---
+
+EXAMPLES
+
+Low:
+"No worries, let's break it down."
+
+High:
+"Great, let’s go deeper."
+
+---
+
+🧠 10. LANGUAGE & CLARITY HANDLING
+
+IF transcript confidence == low:
+
+→ "I didn’t catch that clearly. Could you repeat?"
+
+---
+
+🧠 11. PHASE CONTROL
+
+- INTRO phase: max 2 questions
+- After that → TECHNICAL ONLY
+- NEVER return to intro
+
+---
+
+🧠 12. FAIL-SAFE
+
+IF AI output is invalid:
+
+→ fallback:
+
+"No worries, let’s continue — what is {currentConcept}?"
+
+---
+
+🧠 13. STATE PERSISTENCE
+
+After every turn:
+
+- save memory to database
+- save transcripts
+- save scores
+
+---
+
+🚨 FAILURE CONDITIONS
+
+System is incorrect if:
+
+- AI repeats questions
+- AI gets stuck on one concept
+- AI switches too early
+- AI ignores user performance
+- responses are long paragraphs
+- AI behaves like chatbot
+
+---
+
+🚀 FINAL GOAL
+
+Create an AI interviewer that:
+
+- thinks like a human interviewer
+- adapts to candidate knowledge
+- switches concepts intelligently
+- keeps conversation natural and engaging
+- helps the user improve step-by-step

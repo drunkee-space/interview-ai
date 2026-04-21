@@ -228,23 +228,44 @@ export function buildQuestionPrompt(
     pastWeakTopics: string[],
     previousQuestionsSummary: string,
     lastQuestion: string,
-    questionCount: number
+    questionCount: number,
+    motivation: "supportive" | "neutral" | "challenging" = "neutral",
+    targetConcept: string = "",
+    extraHint: string = ""
 ): string {
-    // Determine conversation phase for human-like flow
+    // ─── PHASE CONTROL (per upgraded spec) ───
+    // INTRO phase: max 2 questions (q0 = icebreaker, q1 = warm-up). After that → TECHNICAL ONLY.
+    // NEVER return to intro.
     let phaseInstruction: string;
     if (questionCount === 0) {
-        phaseInstruction = `🌱 PHASE: ICEBREAKER (q0)
-The candidate just introduced themselves. React warmly to what they shared (1 sentence) and ask a soft motivation question like "What got you into ${topic}?" or "What do you find most interesting about ${topic}?". DO NOT ask a hard technical question yet.`;
+        phaseInstruction = `PHASE: INTRO (q0 — icebreaker)
+The candidate just introduced themselves. React warmly in 1 short sentence and ask a soft motivation question like "What got you into ${topic}?". DO NOT ask a hard technical question yet.`;
     } else if (questionCount === 1) {
-        phaseInstruction = `🌿 PHASE: WARM-UP (q1)
-Acknowledge their motivation briefly. Now ease into the FIRST technical question — keep it foundational and very easy on ${topic} (definitions, basic syntax, "what is X").`;
-    } else if (questionCount <= 3) {
-        phaseInstruction = `🌳 PHASE: BUILDING UP (q${questionCount})
-Acknowledge their last answer. Ask a slightly harder, more concrete question on ${topic} that builds on what they showed they know.`;
+        phaseInstruction = `PHASE: INTRO (q1 — warm-up)
+Acknowledge their motivation briefly. Now ease into the FIRST technical question — foundational and very easy on ${topic}. This is the LAST intro turn.`;
     } else {
-        phaseInstruction = `🚀 PHASE: DEEP DIVE (q${questionCount})
-Acknowledge briefly. Now go deeper — ask about edge cases, trade-offs, real-world scenarios, or "why" / "how would you" questions on ${topic}.`;
+        phaseInstruction = `PHASE: TECHNICAL (q${questionCount})
+You are now strictly in the TECHNICAL phase. NEVER return to intro/greeting/motivation chat.
+Focus ONLY on the current concept: "${targetConcept || topic}".`;
     }
+
+    // ─── MOTIVATION TONE (per spec) ───
+    const toneInstruction = motivation === "supportive"
+        ? `TONE: SUPPORTIVE — the candidate is struggling. Be warm and encouraging. Examples: "No worries, let's break it down." / "That's okay, let's try a simpler angle."`
+        : motivation === "challenging"
+            ? `TONE: CHALLENGING — the candidate is doing well. Push deeper confidently. Examples: "Great, let's go deeper." / "Nice — now here's a tougher one."`
+            : `TONE: NEUTRAL — calm, curious, conversational.`;
+
+    // ─── ACTION-SPECIFIC INTENT ───
+    const actionIntent = ({
+        DEEPER_QUESTION: `Stay on the SAME concept ("${targetConcept || topic}") but ask a HARDER follow-up that probes deeper understanding.`,
+        CLARIFY: `Stay on the SAME concept ("${targetConcept || topic}"). Ask a SIMPLER follow-up that helps the candidate restate or expand their previous answer.`,
+        SIMPLIFY_QUESTION: `Stay on the SAME concept ("${targetConcept || topic}") but DROP difficulty significantly. Maybe give a tiny hint.`,
+        SWITCH_CONCEPT: `Switch to the NEW concept "${targetConcept}". Open with a brief transition like "Let's move to another concept." then ask a foundational question on "${targetConcept}".`,
+        SWITCH_TOPIC: `Switch to a fresh angle on the topic. Open with a brief transition then ask a foundational question.`,
+        CONTINUE_TOPIC: `Ask another question on the topic at the same difficulty, on a NEW sub-concept the candidate hasn't covered yet.`,
+        REASK: `Rephrase the previous question more clearly so the candidate can re-answer.`,
+    } as Record<string, string>)[action] || `Ask a clear, on-topic question.`;
 
     return `You are a warm, professional technical interviewer having a REAL conversation.
 
@@ -278,55 +299,63 @@ Then ask the NEXT NEW question.
 
 ═══════════════════════════════════
 
-🧠 HOW TO SOUND HUMAN
+🧠 STRICT RESPONSE FORMAT (NON-NEGOTIABLE)
 
-- Speak like a senior developer chatting with a junior — friendly, patient, encouraging
-- Use natural transitions: "So...", "Now...", "Alright, moving on..."
-- Vary your phrasing every turn — never repeat the same encouragement twice
-- 2-3 sentences max (1 acknowledgment + 1 question, optionally 1 brief hint)
+Every response MUST:
+- Be 1 to 2 sentences ONLY (hard cap)
+- Contain exactly ONE short encouragement / acknowledgement
+- Contain exactly ONE clear question (ending in "?")
+- Sound conversational, like a real human interviewer
 
 GOOD EXAMPLES:
-- "That's right, HTML is a markup language! Now, can you tell me what the <div> tag is used for?"
-- "Good explanation. Let's go a bit deeper — what's the difference between inline and block elements?"
-- "Not quite, but you're close. The box model actually includes margin, border, padding, and content. Can you explain what padding does?"
-- "Nice try. Let me simplify — what does CSS stand for?"
+- "Nice start. Can you explain how useState updates asynchronously?"
+- "No worries. What is the difference between props and state?"
+- "Great — let's go deeper. How does the virtual DOM decide what to re-render?"
 
 BAD EXAMPLES (NEVER DO THIS):
-- Asking "What does HTML stand for?" if the candidate already said it
-- Asking about anything already covered in the conversation history
-- "What is CSS?" (no acknowledgment, robotic)
-- Long paragraphs or lectures
+- More than 2 sentences
+- No question, or multiple questions
+- Long paragraphs, lectures, or hints longer than the question
+- Repeating the previous question word-for-word
 - Repeating greetings ("Hi!", "Welcome!")
+- Asking about anything already covered in the conversation history
 
 ═══════════════════════════════════
 
-📈 PROGRESSION RULES
+📈 ACTION INTENT (THIS TURN)
 
-- Action: ${action}
-- If action is CONTINUE_TOPIC: Ask another question at same difficulty on a NEW concept
-- If action is DEEPER_QUESTION: Ask a harder question on the same topic, going deeper
-- If action is SIMPLIFY_QUESTION: Ask an easier question, optionally with a small hint
-- If action is REASK: Rephrase the same question more clearly
-- If action is CLARIFY: Ask them to elaborate on their previous answer
+${actionIntent}
+
+${toneInstruction}
+
+═══════════════════════════════════
+
+🚫 ANTI-REPETITION GUARD
+
+- The last question was: "${lastQuestion}"
+- Your new question MUST NOT be the same or near-identical wording.
+- Use different phrasing AND a different angle.
 
 ═══════════════════════════════════
 
 CONTEXT:
 - Topic: ${topic}
+- Current concept: ${targetConcept || "(none)"}
 - Target difficulty: ${difficulty}
 - Question count: ${questionCount}
-- Last question asked: "${lastQuestion}"
 - Known weaknesses: ${weaknesses.length > 0 ? weaknesses.join(", ") : "none yet"}
 
 Previous conversation summary:
 ${previousQuestionsSummary}
 
+${extraHint ? `\n${extraHint}\n` : ""}
+
 ═══════════════════════════════════
 
-🎯 OUTPUT FORMAT
+🎯 OUTPUT FORMAT (STRICT JSON)
 
 {
-  "question": "Your natural response including acknowledgment + next NEW question",
+  "question": "1-2 sentence response: short acknowledgement + ONE clear question",
   "topic": "${topic}",
   "difficulty": "${difficulty}"
 }`;

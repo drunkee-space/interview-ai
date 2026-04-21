@@ -40,11 +40,15 @@ export async function POST(request: NextRequest) {
 
         // 3. Get the last interviewer question from history
         const lastQuestionTurn = memory.conversationHistory.filter(t => t.role === "interviewer").pop();
-        const lastQuestion = lastQuestionTurn ? lastQuestionTurn.content : "Tell me about yourself";
-        
+        const lastQuestion = memory.lastQuestion || (lastQuestionTurn ? lastQuestionTurn.content : "Tell me about yourself");
+
         const currentTopic = memory.topicsAsked.length > 0 
             ? memory.topicsAsked[memory.topicsAsked.length - 1].topic 
             : "general";
+
+        // Track raw user answer in memory (used by anti-repetition + UI)
+        memory.lastUserAnswer = cleanedAnswer;
+        memory.lastQuestion = lastQuestion;
 
         // ─── CONFIDENCE LOOP INTERCEPTION (CRITICAL) ───
         if (confidence === "high" || confidence === "medium") {
@@ -128,6 +132,35 @@ export async function POST(request: NextRequest) {
 
         // System Control: Hard Topic Lock Enforcement
         decision.next_topic = enforceTopicLock(decision.action, currentTopic, decision.next_topic);
+
+        // ─── Concept tracking: apply switch decision to memory ───
+        if (decision.action === "SWITCH_CONCEPT" && decision.next_concept) {
+            const previousConcept = (memory.currentConcept || "").toLowerCase();
+            const visited = new Set([...(memory.visitedConcepts || [])]);
+            if (previousConcept) visited.add(previousConcept);
+            const remainingQueue = (memory.conceptQueue || []).filter(
+                c => c.toLowerCase() !== decision.next_concept!.toLowerCase()
+            );
+            memory = {
+                ...memory,
+                currentConcept: decision.next_concept,
+                visitedConcepts: Array.from(visited),
+                conceptQueue: remainingQueue,
+            };
+        } else if (!memory.currentConcept) {
+            // First technical turn — seed the current concept from the queue
+            const queue = memory.conceptQueue || [];
+            if (queue.length > 0) {
+                memory = {
+                    ...memory,
+                    currentConcept: queue[0],
+                    conceptQueue: queue.slice(1),
+                };
+            }
+        }
+
+        // Phase progression: after q1 we're past INTRO, otherwise stay in TECHNICAL
+        memory.phase = memory.questionCount >= 2 ? "TECHNICAL" : "INTRO";
 
         // ═══ ANSWER VALIDATION INTERCEPTION ═══
         // ═══ TERMINAL STATE INTERCEPTION ═══
@@ -235,9 +268,10 @@ export async function POST(request: NextRequest) {
 
         const shouldEndInterview = false;
 
-        // Add to memory
+        // Add to memory + persist as latest question for anti-repetition next turn
         memory = addTurn(memory, "interviewer", nextQuestionText);
-        
+        memory.lastQuestion = nextQuestionText;
+
         // ─── Save transcripts and session to DB as DISCUSSION ───
         await appendTranscript(sessionId, "AI", nextQuestionText, supabase);
         await saveSessionState(sessionId, "DISCUSSION", decision.next_topic, memory, undefined, supabase);
