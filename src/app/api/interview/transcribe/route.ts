@@ -29,9 +29,11 @@ export async function POST(req: NextRequest) {
         // Use Whisper's translation endpoint which always outputs English regardless of input language.
         // This prevents garbled transcriptions (e.g. Japanese characters when speaking Tamil)
         // and ensures the AI always receives clean English text to reason about.
+        // Note: only `whisper-large-v3` supports translation on Groq.
+        // The "turbo" variant supports transcription only.
         const transcription = await (groqClient.audio as any).translations.create({
             file,
-            model: "whisper-large-v3-turbo",
+            model: "whisper-large-v3",
             response_format: "verbose_json",
             prompt: basePrompt,
             temperature: 0.0,
