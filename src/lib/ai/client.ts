@@ -1,19 +1,20 @@
 // ═══════════════════════════════════════════════════════
-// AI SDK Client — Gemini Integration
+// AI SDK Client — Groq Integration
 // ═══════════════════════════════════════════════════════
 
-import { GoogleGenerativeAI } from "@google/genai";
+import Groq from "groq-sdk";
 
-const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+const API_KEY = process.env.GROQ_API_KEY;
 
 if (!API_KEY) {
-    console.warn("⚠️  GOOGLE_GENERATIVE_AI_API_KEY is not set. AI interviewer will not work.");
+    console.warn("⚠️  GROQ_API_KEY is not set. AI interviewer will not work.");
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY || "");
+export const groqClient = new Groq({ apiKey: API_KEY || "" });
 
-// Using gemini-1.5-flash as the default powerful but fast model
-const DEFAULT_MODEL = "gemini-1.5-flash";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+
+const DEFAULT_SYSTEM_PROMPT = "You are a polished mock interviewer. Speak naturally, stay concise, and avoid repetitive filler.";
 
 const JSON_SYSTEM_PROMPT = [
     "You are a precise API assistant.",
@@ -22,60 +23,54 @@ const JSON_SYSTEM_PROMPT = [
 ].join(" ");
 
 function extractJsonObject(text: string): string {
-    let cleanText = text;
-    // Handle potential reasoning blocks or markdown fences
-    const start = cleanText.indexOf("{");
-    const end = cleanText.lastIndexOf("}");
-
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
     if (start === -1 || end === -1 || end <= start) {
-        return cleanText;
+        return text;
     }
-
-    return cleanText.slice(start, end + 1);
+    return text.slice(start, end + 1);
 }
 
 /**
- * Generate standard text using Gemini.
+ * Generate standard text using Groq.
  */
 export async function generateText(prompt: string, modelName: string = DEFAULT_MODEL, systemPrompt?: string): Promise<string> {
     try {
-        const model = genAI.getGenerativeModel({ 
+        const completion = await groqClient.chat.completions.create({
             model: modelName,
-            systemInstruction: systemPrompt || "You are a polished mock interviewer. Speak naturally, stay concise, and avoid repetitive filler."
+            messages: [
+                { role: "system", content: systemPrompt || DEFAULT_SYSTEM_PROMPT },
+                { role: "user", content: prompt },
+            ],
         });
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return response.text() || "";
+        return completion.choices[0]?.message?.content || "";
     } catch (error) {
-        console.error("[generateText] Gemini Error:", error);
+        console.error("[generateText] Groq Error:", error);
         return "";
     }
 }
 
 /**
- * Generate JSON output using Gemini's native JSON mode.
+ * Generate JSON output using Groq's JSON mode.
  */
 export async function generateJson(prompt: string, modelName: string = DEFAULT_MODEL, maxRetries: number = 2): Promise<Record<string, unknown>> {
     let attempt = 0;
     while (attempt <= maxRetries) {
         try {
-            const model = genAI.getGenerativeModel({ 
+            const completion = await groqClient.chat.completions.create({
                 model: modelName,
-                generationConfig: {
-                    responseMimeType: "application/json",
-                }
+                response_format: { type: "json_object" },
+                messages: [
+                    { role: "system", content: JSON_SYSTEM_PROMPT },
+                    { role: "user", content: prompt + "\n\nCRITICAL: Return exactly one valid JSON object. No markdown, no prose, no code fences." },
+                ],
             });
 
-            const result = await model.generateContent({
-                contents: [{ role: "user", parts: [{ text: prompt + "\n\nCRITICAL: Return exactly one valid JSON object. No markdown, no prose, no code fences." }] }],
-            });
-
-            const text = result.response.text() || "{}";
+            const text = completion.choices[0]?.message?.content || "{}";
             return JSON.parse(extractJsonObject(text.trim()));
         } catch (e) {
             attempt++;
-            console.warn(`[generateJson] Attempt ${attempt} failed for Gemini. Retrying...`, e);
+            console.warn(`[generateJson] Attempt ${attempt} failed for Groq. Retrying...`, e);
             if (attempt > maxRetries) {
                 console.error("[generateJson] All retries exhausted.");
                 throw new Error("Failed to generate valid JSON after retries.");
@@ -83,8 +78,8 @@ export async function generateJson(prompt: string, modelName: string = DEFAULT_M
             await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
         }
     }
-    
+
     throw new Error("Failed to generate valid JSON after retries.");
 }
 
-export default genAI;
+export default groqClient;

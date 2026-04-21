@@ -4,3 +4,9 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+NEXT_PUBLIC_SUPABASE_URL = "https://yayizdcyodtgrytwqneb.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_M39zF9CLJCIo6siRh4OGGQ_9UCS4Sdr"
