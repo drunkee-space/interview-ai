@@ -49,42 +49,79 @@ INPUT:
 - Candidate Answer: ${answer}
 - Expected Topic: ${topic}
 
-CRITICAL SCORING GUIDELINES:
-- If the candidate demonstrates understanding of the CORE CONCEPT → score >= 6
-- If the answer is conceptually correct but uses imperfect wording → score 6-7 (not lower)
-- If the answer covers the main idea AND adds extra detail → score 8-9
-- Only score below 4 if the answer is FACTUALLY WRONG or COMPLETELY off-topic
-- A short but correct answer is still correct (score 6+)
-- "I don't know" or skipping = score 2, skipped = true
-- Give benefit of the doubt — this is a learning environment
+═══════════════════════════════════════════════════════
+🧠 STEP 0 — RESOLVE PRONOUNS BEFORE SCORING (MANDATORY)
+═══════════════════════════════════════════════════════
 
-TASK:
-1. Evaluate:
-   - score (0-10): How correct and complete is the answer?
-   - clarity (0-10): How clearly did they communicate?
-   - depth (0-10): How deep is their understanding?
+Real candidates speak naturally. They DO NOT repeat the full subject of the question
+in their answer — they use pronouns and short phrases.
 
+Before judging the answer, you MUST mentally rewrite it by replacing
+pronouns / vague references with the subject from the QUESTION.
+
+Pronouns to resolve: "it", "they", "this", "that", "the tag", "the function",
+"the method", "the keyword", "this one", "those", "such things", "these".
+
+Examples of correct resolution:
+- Q: "What is the purpose of the <p> tag in HTML?"
+  A: "The tag is used for paragraphs."
+  → Resolved: "The <p> tag is used for paragraphs."   ✅ CORRECT (score 8)
+
+- Q: "What does useState do in React?"
+  A: "It manages local state in a component."
+  → Resolved: "useState manages local state in a component."   ✅ CORRECT (score 8)
+
+- Q: "What is a closure?"
+  A: "Function inside another function that remembers its outer variables."
+  → Resolved: as-is.   ✅ CORRECT (score 8)
+
+If the resolved answer is factually correct, score it as if the candidate
+had said it in full. DO NOT punish brevity, pronoun usage, or natural phrasing.
+
+═══════════════════════════════════════════════════════
+🎯 SCORING RULES (apply AFTER pronoun resolution)
+═══════════════════════════════════════════════════════
+
+- Resolved answer is FACTUALLY CORRECT and addresses the question
+  → score 7–8 (even if very short, even if missing extra detail)
+- Resolved answer is correct AND adds depth/example/edge case
+  → score 9–10
+- Resolved answer is conceptually correct but slightly imprecise wording
+  → score 6–7
+- Resolved answer touches the topic but misses the key idea
+  → score 4–5  (intent = PARTIAL_ANSWER)
+- Resolved answer is FACTUALLY WRONG (asserts something false)
+  → score 1–3  (intent = CONFUSED)
+- Candidate explicitly said "I don't know" / "no idea" / nothing meaningful
+  → score 1–2, skipped = true, intent = NO_ANSWER
+- Answer is about a completely unrelated subject
+  → score 1–2, is_relevant = false, intent = IRRELEVANT
+
+⚠️ DO NOT lower the score because:
+  - the answer is short
+  - the candidate used "it" / "the tag" / "this" instead of repeating the subject
+  - the answer doesn't include examples (unless the question asked for one)
+  - the wording isn't textbook-perfect
+
+⚠️ ONLY mark is_relevant = false when the candidate talks about something
+   COMPLETELY unrelated to the question (e.g. asked about HTML, talks about cars).
+
+═══════════════════════════════════════════════════════
+📝 OUTPUT
+═══════════════════════════════════════════════════════
+
+1. Evaluate (0-10): score, clarity, depth
 2. Feedback:
-   - explanation: 1-2 sentence reasoning for the score (~120 chars max)
-   - strengths: What they did well (short phrases)
-   - weaknesses: UPPER_SNAKE_CASE tags ONLY (e.g. "HTML_BASICS", "CSS_LAYOUT", "JS_CLOSURES")
-   - improvement_tip: One actionable suggestion
-
-3. Detection:
-   - skipped: true ONLY if they explicitly said "I don't know" or gave no meaningful content
-   - concepts_detected: technical concepts mentioned in their answer
-
-4. Relevance:
-   - is_relevant: Is the answer about the question topic? (true/false)
-   - relevance_score: 1-10
-   - ONLY mark is_relevant = false if they talk about something COMPLETELY unrelated
-
-5. Intent (classify exactly ONE):
-   - VALID_ANSWER: On topic, demonstrates understanding (even if partial)
-   - PARTIAL_ANSWER: Touches on the topic but missing key pieces
-   - CONFUSED: Clearly misunderstands the concept
-   - IRRELEVANT: Talks about something completely different
-   - NO_ANSWER: Skips, says "idk", or gives extremely vague filler
+   - explanation: 1-2 sentence reasoning that EXPLICITLY mentions the resolved
+     interpretation (e.g. "Candidate said 'the tag' meaning '<p> tag' — correct.")
+     Max ~120 chars.
+   - strengths: short phrases
+   - weaknesses: UPPER_SNAKE_CASE tags ONLY (e.g. "HTML_BASICS")
+   - improvement_tip: one actionable suggestion
+3. skipped: true ONLY for explicit "I don't know" / empty answer
+4. concepts_detected: technical concepts mentioned (after resolution)
+5. is_relevant + relevance_score (1-10)
+6. intent: ONE of VALID_ANSWER | PARTIAL_ANSWER | CONFUSED | IRRELEVANT | NO_ANSWER
 
 OUTPUT STRICT JSON:
 {
