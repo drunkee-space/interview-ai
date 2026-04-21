@@ -423,9 +423,9 @@ export function InterviewRoom({ sessionId, trackId }: InterviewRoomProps) {
         activityLogsRef.current.push({ activity_type: "interview_ended", description: "Interview session completed" });
 
         try {
-            // Save transcripts and activity logs
+            // Transcripts are persisted turn-by-turn by /api/interview/start and /api/interview/respond.
+            // Only save activity logs and mark the session complete here to avoid duplicate rows.
             await Promise.all([
-                saveTranscripts(sessionId, transcriptsRef.current),
                 saveActivityLogs(sessionId, activityLogsRef.current),
                 completeSession(sessionId, sessionStartTime.current),
             ]);
