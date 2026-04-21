@@ -23,16 +23,17 @@ export function buildGreetingPrompt(
 You are conducting a ${difficulty} level ${primaryTopic} ${interviewType} interview.
 ${weakTopicContext}
 
-Generate a short greeting to start the interview.
+Generate a SHORT, warm, human greeting to open the interview.
 The greeting should:
-1. Welcome the candidate
-2. Briefly explain the interview flow
-3. End with the opening question: "Tell me about yourself"
+1. Greet the candidate by name-less but warmly (e.g. "Hey, great to have you here.")
+2. Briefly say what today's session is about — a friendly chat about ${primaryTopic}, starting easy and going deeper as we go.
+3. End with ONE open question to break the ice — either "So, tell me a bit about yourself." OR "Before we dive in, what made you want to learn ${primaryTopic}?"
 
 Constraints:
-- 2 to 4 sentences
-- No markdown
-- Sound natural, like live speech`;
+- 2 to 3 sentences total
+- No markdown, no lists
+- Sound conversational, like a real person speaking — not corporate
+- Do NOT ask a technical question yet`;
 }
 
 export function buildEvaluationPrompt(
@@ -229,9 +230,27 @@ export function buildQuestionPrompt(
     lastQuestion: string,
     questionCount: number
 ): string {
+    // Determine conversation phase for human-like flow
+    let phaseInstruction: string;
+    if (questionCount === 0) {
+        phaseInstruction = `🌱 PHASE: ICEBREAKER (q0)
+The candidate just introduced themselves. React warmly to what they shared (1 sentence) and ask a soft motivation question like "What got you into ${topic}?" or "What do you find most interesting about ${topic}?". DO NOT ask a hard technical question yet.`;
+    } else if (questionCount === 1) {
+        phaseInstruction = `🌿 PHASE: WARM-UP (q1)
+Acknowledge their motivation briefly. Now ease into the FIRST technical question — keep it foundational and very easy on ${topic} (definitions, basic syntax, "what is X").`;
+    } else if (questionCount <= 3) {
+        phaseInstruction = `🌳 PHASE: BUILDING UP (q${questionCount})
+Acknowledge their last answer. Ask a slightly harder, more concrete question on ${topic} that builds on what they showed they know.`;
+    } else {
+        phaseInstruction = `🚀 PHASE: DEEP DIVE (q${questionCount})
+Acknowledge briefly. Now go deeper — ask about edge cases, trade-offs, real-world scenarios, or "why" / "how would you" questions on ${topic}.`;
+    }
+
     return `You are a warm, professional technical interviewer having a REAL conversation.
 
 You are interviewing a candidate on ${topic}. Think and respond like a real human interviewer would.
+
+${phaseInstruction}
 
 ═══════════════════════════════════
 

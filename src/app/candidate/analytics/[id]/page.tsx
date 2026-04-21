@@ -7,7 +7,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
     Trophy, Target, MessageSquare, Shield, ChevronLeft,
-    ArrowRight, FileText, Sparkles, AlertCircle,
+    ArrowRight, FileText, Sparkles, AlertCircle, BookOpen, Loader2, ChevronDown, ChevronUp, ExternalLink,
 } from "lucide-react";
 
 interface SessionData {
@@ -40,18 +40,26 @@ export default function InterviewReportPage({
     const [evaluation, setEvaluation] = useState<EvaluationData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [showTranscript, setShowTranscript] = useState(false);
+    const [primaryTopic, setPrimaryTopic] = useState<string>("");
+    const [studyMaterials, setStudyMaterials] = useState<Record<string, any>>({});
+    const [generatingTopic, setGeneratingTopic] = useState<string | null>(null);
+    const [expandedMaterial, setExpandedMaterial] = useState<string | null>(null);
+    const [studyError, setStudyError] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchReport() {
             try {
-                const [sessionRes, analyticsRes] = await Promise.all([
+                const [sessionRes, analyticsRes, studyRes] = await Promise.all([
                     fetch(`/api/interview/session/${id}`),
                     fetch(`/api/analytics`),
+                    fetch(`/api/analytics/study-materials?sessionId=${id}`),
                 ]);
 
                 if (sessionRes.ok) {
                     const data = await sessionRes.json();
                     setSessionData(data);
+                    const cfg = data?.memory?.configSnapshot || data?.memory;
+                    setPrimaryTopic(cfg?.primary_topic || data?.memory?.interviewType || "");
                 }
 
                 if (analyticsRes.ok) {
@@ -61,6 +69,13 @@ export default function InterviewReportPage({
                         setEvaluation(match.evaluation);
                     }
                 }
+
+                if (studyRes.ok) {
+                    const sd = await studyRes.json();
+                    const map: Record<string, any> = {};
+                    (sd.materials || []).forEach((m: any) => { map[m.topic] = m; });
+                    setStudyMaterials(map);
+                }
             } catch (err) {
                 console.error("Failed to fetch report:", err);
             } finally {
@@ -69,6 +84,30 @@ export default function InterviewReportPage({
         }
         fetchReport();
     }, [id]);
+
+    async function handleGenerateStudyMaterial(topic: string) {
+        if (generatingTopic) return;
+        setGeneratingTopic(topic);
+        setStudyError(null);
+        try {
+            const res = await fetch("/api/analytics/study-materials", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId: id, topic, primaryTopic }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setStudyError(data.error || "Failed to generate study material");
+            } else {
+                setStudyMaterials(prev => ({ ...prev, [topic]: data.material }));
+                setExpandedMaterial(topic);
+            }
+        } catch (e: any) {
+            setStudyError(e.message || "Network error");
+        } finally {
+            setGeneratingTopic(null);
+        }
+    }
 
     function getScoreColor(score: number): string {
         if (score >= 70) return "text-emerald-400";
@@ -184,6 +223,157 @@ export default function InterviewReportPage({
                                 {(!evaluation.weak_topics?.length) && <li className="text-sm text-muted-foreground italic">None recorded</li>}
                             </ul>
                         </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* AI Study Materials for Weak Topics */}
+            {evaluation && evaluation.weak_topics && evaluation.weak_topics.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.13 }}
+                    className="mb-10"
+                >
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-xl bg-amber-500/10">
+                            <BookOpen className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-foreground">Personalized Study Materials</h3>
+                            <p className="text-xs text-muted-foreground">Generate an AI study guide for each weak topic.</p>
+                        </div>
+                    </div>
+
+                    {studyError && (
+                        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                            {studyError}
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        {evaluation.weak_topics.map((topic) => {
+                            const material = studyMaterials[topic];
+                            const isGenerating = generatingTopic === topic;
+                            const isExpanded = expandedMaterial === topic;
+
+                            return (
+                                <div key={topic} className="bg-card/50 glass border border-border rounded-2xl overflow-hidden">
+                                    <div className="flex items-center justify-between gap-3 p-4">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                                <BookOpen className="w-4 h-4 text-amber-500" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-foreground truncate">
+                                                    {material?.title || topic.replace(/_/g, " ")}
+                                                </p>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    {material ? "Study guide ready" : "No guide yet"}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {material ? (
+                                            <button
+                                                onClick={() => setExpandedMaterial(isExpanded ? null : topic)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                                            >
+                                                {isExpanded ? <>Hide <ChevronUp className="w-3.5 h-3.5" /></> : <>View <ChevronDown className="w-3.5 h-3.5" /></>}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleGenerateStudyMaterial(topic)}
+                                                disabled={isGenerating}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
+                                            >
+                                                {isGenerating ? (
+                                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                                                ) : (
+                                                    <><Sparkles className="w-3.5 h-3.5" /> Generate</>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {material && isExpanded && (
+                                        <div className="border-t border-border px-5 py-5 space-y-5 bg-background/30">
+                                            {material.summary && (
+                                                <p className="text-sm text-foreground/80 leading-relaxed">{material.summary}</p>
+                                            )}
+
+                                            {Array.isArray(material.key_concepts) && material.key_concepts.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Key Concepts</h4>
+                                                    <ul className="space-y-2">
+                                                        {material.key_concepts.map((kc: any, i: number) => (
+                                                            <li key={i} className="text-sm">
+                                                                <span className="font-semibold text-foreground">{kc.concept}: </span>
+                                                                <span className="text-foreground/70">{kc.explanation}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {Array.isArray(material.examples) && material.examples.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Examples</h4>
+                                                    <div className="space-y-3">
+                                                        {material.examples.map((ex: any, i: number) => (
+                                                            <div key={i} className="bg-card/40 border border-border rounded-lg p-3">
+                                                                <p className="text-xs font-semibold text-foreground mb-2">{ex.title}</p>
+                                                                {ex.code && (
+                                                                    <pre className="text-[11px] bg-background/60 border border-border rounded p-2 overflow-x-auto text-foreground/80 mb-2"><code>{ex.code}</code></pre>
+                                                                )}
+                                                                {ex.explanation && (
+                                                                    <p className="text-xs text-foreground/70">{ex.explanation}</p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {Array.isArray(material.practice_questions) && material.practice_questions.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Practice Questions</h4>
+                                                    <ul className="space-y-2">
+                                                        {material.practice_questions.map((q: string, i: number) => (
+                                                            <li key={i} className="flex gap-2 text-sm text-foreground/80">
+                                                                <span className="text-primary font-semibold">{i + 1}.</span>
+                                                                <span>{q}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {Array.isArray(material.resources) && material.resources.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Resources</h4>
+                                                    <ul className="space-y-1.5">
+                                                        {material.resources.map((r: any, i: number) => (
+                                                            <li key={i}>
+                                                                <a
+                                                                    href={r.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                                                                >
+                                                                    {r.title} <ExternalLink className="w-3 h-3" />
+                                                                </a>
+                                                                {r.type && <span className="text-[10px] text-muted-foreground ml-2 uppercase tracking-wider">{r.type}</span>}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.div>
             )}
